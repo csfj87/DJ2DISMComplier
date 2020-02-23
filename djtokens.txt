@@ -1,0 +1,137 @@
+/* 
+   My professor wrote lines 6-25 and 125-137, and I wrote the rest. 
+   This file is needed to declare the tokens in the DJ programs. 
+   And the main function repeatedly invokes the lexer. File name dj.y.
+*/
+%code provides {
+  #include "lex.yy.c"
+
+  /* Function for printing generic syntax-error messages */
+  void yyerror(const char *str) {
+    printf("Syntax error on line %d at token %s\n",
+           yylineno,yytext);
+    printf("Halting compiler.\n");
+    exit(-1);
+  }
+}
+%token MAIN CLASS EXTENDS NATTYPE IF ELSE WHILE
+%token PRINTNAT READNAT THIS NEW NUL NATLITERAL 
+%token ID ASSIGN PLUS MINUS TIMES EQUALITY LESS 
+%token AND NOT DOT SEMICOLON COMMA LBRACE RBRACE 
+%token LPAREN RPAREN ENDOFFILE
+
+%start pgm
+
+%right ASSIGN
+%left AND
+%left EQUALITY LESS
+%left PLUS MINUS
+%left TIMES
+%right NOT
+%left DOT
+
+%%
+
+pgm : class_list main ENDOFFILE
+    {return 0;}
+    ;
+
+class: CLASS ID EXTENDS ID LBRACE class_inside RBRACE
+     ;
+
+
+class_list: class_list class
+          |
+	  ;
+	
+	 
+class_inside: def_list fun_list
+	    | def_list
+	    ;
+
+fun_list: fun_list fun_def
+	|fun_def
+	;
+		
+fun_def: NATTYPE ID LPAREN fun_par_list RPAREN LBRACE fun_body RBRACE
+	   | ID ID LPAREN fun_par_list RPAREN LBRACE fun_body RBRACE
+	   ;
+	   
+fun_par_list:fun_par
+	    |
+	    ;
+			
+fun_par: def
+       |fun_par COMMA def
+       ;
+	   
+fun_body: def_list exp_list
+	|
+	;
+
+main: MAIN LBRACE def_list exp_list RBRACE
+    |
+    ;
+	 
+
+def_list: def_list def SEMICOLON
+	|
+	;	 
+		
+def : NATTYPE ID SEMICOLON
+    |ID ID SEMICOLON
+    ;
+
+exp_list : exp_list exp SEMICOLON
+	 | exp SEMICOLON
+	 ;
+
+
+exp:exp PLUS exp
+   |exp MINUS exp
+   |exp TIMES exp
+   |exp EQUALITY exp
+   |exp LESS exp
+   |NOT exp
+   |exp AND exp
+   |NATLITERAL
+   |NUL
+   |IF LPAREN exp RPAREN LBRACE exp_list RBRACE ELSE LBRACE exp_list RBRACE
+   |WHILE LPAREN exp RPAREN LBRACE exp_list RBRACE
+   |NEW ID LPAREN RPAREN
+   |THIS 
+   |PRINTNAT LPAREN exp RPAREN
+   |READNAT LPAREN RPAREN
+   |exp DOT ID
+   |ID ASSIGN exp
+   |exp DOT ID ASSIGN exp
+   |ID LPAREN par_list RPAREN
+   |exp DOT ID LPAREN par_list RPAREN
+   |LPAREN exp RPAREN
+   |ID
+   ;
+	
+par_list: par
+	|
+	;
+		
+par: exp
+   | par COMMA exp
+   ;
+
+			
+%%
+
+int main(int argc, char **argv) {
+  if(argc!=2) {
+    printf("Usage: dj-lex  input-filename\n");
+    exit(-1);
+  }
+  // open the input file
+  yyin = fopen(argv[1],"r");
+  if(yyin==NULL) {
+    printf("ERROR: could not open file %s\n",argv[1]);
+    exit(-1);
+  }
+  return yyparse();
+}
